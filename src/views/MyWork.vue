@@ -12,23 +12,32 @@ let renderer;
 
 let canvasRef = ref();
 
-
-
-/* const textureLoader = new THREE.TextureLoader();
-textureLoader.setPath( 'src/assets/images/' ); */
-
-/* const texture = new THREE.TextureLoader().load('src/assets/images/MaskaDeni.png' ); 
-
-const material = new THREE.MeshBasicMaterial( { map:texture } ); */
-
 var textureLoader = new THREE.TextureLoader();
 
-/* let videoTexture = new THREE.VideoTexture(video) */
+
+/* camera settings */
+let camera = new THREE.PerspectiveCamera(
+  55,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  100
+);
+
+camera.position.y = 1;
+camera.position.z = 2;
+camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+scene.add(camera);
+
+let loop = () => {
+  /* box.rotation.y += 0.001; */
+  renderer.render(scene, camera);
+};
 
 let resizeCallback = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix;
+  camera.updateProjectionMatrix();
 };
 
 document.onkeydown = function (e) {
@@ -48,16 +57,20 @@ document.onkeydown = function (e) {
 
 const manager = new THREE.LoadingManager();
 onMounted(() => {
-  manager.onLoad = function ( ) {
-	console.log( 'Loading complete!');
-};
+  manager.onLoad = function () {
+    console.log("Loading complete!");
+  };
 
   let video = document.getElementById("video");
   let videoTexture = new THREE.VideoTexture(video);
-video.addEventListener('loadeddata', function() {
-    console.log("video redy")
-    document.getElementById("loading-screen").style.display = "none"
-}, false);
+  video.addEventListener(
+    "loadeddata",
+    function () {
+      console.log("video redy");
+      document.getElementById("loading-screen").style.display = "none";
+    },
+    false
+  );
 
   var texture0 = textureLoader.load("src/assets/images/MaskaDeni.png");
   var texture1 = textureLoader.load("src/assets/images/lagan.mp4");
@@ -95,24 +108,6 @@ video.addEventListener('loadeddata', function() {
   directionalLight2.position.set(20, 30, 0);
   scene.add(directionalLight2);
 
-  let camera = new THREE.PerspectiveCamera(
-    55,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    100
-  );
-
-  camera.position.y = 1;
-  camera.position.z = 2;
-  camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-  scene.add(camera);
-
-  let loop = () => {
-    /* box.rotation.y += 0.001; */
-    renderer.render(scene, camera);
-  };
-
   const tl = gsap.timeline({
     scrollTrigger: {
       markers: true,
@@ -125,13 +120,10 @@ video.addEventListener('loadeddata', function() {
     },
   });
 
-
   tl.to(box.rotation, {
     y: /* box.position.y + */ 10,
-    duration: 1
+    duration: 1,
   });
-
-
 
   renderer = new THREE.WebGLRenderer({
     canvas: canvasRef.value,
@@ -148,11 +140,9 @@ video.addEventListener('loadeddata', function() {
   window.addEventListener("resize", resizeCallback);
 
   //console.log("renderer: ", renderer.domElement);
-
 });
 
 onUnmounted(() => {
-
   renderer.setAnimationLoop(null);
   window.removeEventListener("resize", resizeCallback);
 });
@@ -188,13 +178,20 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-  #loading-screen {
-    height: 100vh;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-  .animation-div {
-    align-self: center;
-  }
+#loading-screen {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.animation-div {
+  align-self: center;
+}
+.canvas{
+  width: 300px !important;
+
+}
+.canvas-wrap {
+  margin: 0;
+}
 </style>

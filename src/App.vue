@@ -3,14 +3,103 @@ import HelloWorld from "./components/HelloWorld.vue";
 import HomeView from "./views/HomeView.vue";
 import AboutView from "./views/AboutView.vue";
 import { onMounted } from "vue";
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute } from "vue-router";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+gsap.registerPlugin(ScrollTrigger);
 
-const router = useRouter()
-const route = useRoute()
-
-
+const router = useRouter();
+const route = useRoute();
+let navImages = [
+  "https://images.pexels.com/photos/866398/pexels-photo-866398.jpeg?cs=srgb&dl=pexels-ralph-chang-260364-866398.jpg&fm=jpg",
+  "https://c4.wallpaperflare.com/wallpaper/292/446/516/ultra-wide-photography-wallpaper-preview.jpg",
+  "https://www.adobe.com/creativecloud/photography/discover/media_14a70d05518088731e4ca4904415f2cec8641d72a.png?width=750&format=png&optimize=medium",
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQOtojl7Nry10DrNratv8CWMdwGHE_5U04RvA&s",
+];
 onMounted(() => {
+  let links = document.querySelectorAll(".navbar-anim");
 
+  function proba () {
+     let activeLink = document.getElementsByClassName("router-link-exact-active");
+     //console.log(activeLink[0])
+  }
+ 
+/*   links.forEach(element => {
+    element.classList.forEach(e => {
+      console.log(e)
+      if (e == "router-link-exact-active") {
+        activeLink = element
+      }
+    });
+  }); */
+  proba()
+
+  links.forEach((link, index) => {
+    link.addEventListener("mouseover", (e) => {
+      if (link.classList.length == 2) {
+        link.style.setProperty("--before-width", "120%");
+        link.style.setProperty(
+          "--before-rotation",
+          `${Math.floor(Math.random() * 11) - 5}deg`
+        );
+      }
+
+      let classlist = link.classList;
+
+      cursorBorder.style.setProperty("--size", "150px");
+      cursorBorder.style.mixBlendMode = "difference";
+      cursorBorder.style.background = "white";
+      cursorBorder.style.setProperty("--cursor-image", `none`);
+
+      gsap.to(link, {
+        scale: 1.2,
+        duration: 0.2,
+        ease: "power3.out",
+      });
+    });
+
+    link.addEventListener("mouseout", (e) => {
+      link.style.setProperty("--before-width", "0%");
+      cursorBorder.style.setProperty("--size", "50px");
+      cursorBorder.style.background = `transparent`;
+      cursorBorder.style.setProperty(
+        "--cursor-image",
+        `url(https://www.orthopedicare.com/wp-content/themes/socius/images/scroll-down.gif)`
+      );
+
+      if (link.classList.length == 2) {
+        gsap.to(link, {
+          scale: 1,
+          duration: 0.2,
+          ease: "power3.out",
+        });
+      }
+    });
+  });
+
+  let nav_items = gsap.utils.toArray(".navbar-anim");
+
+  const cursorBorder = document.querySelector("#cursor-border");
+
+  const cursorPos = { x: 0, y: 0 };
+  const cursorBorderPos = { x: 0, y: 0 };
+
+  document.addEventListener("mousemove", (e) => {
+    cursorPos.x = e.clientX;
+    cursorPos.y = e.clientY;
+
+    cursorBorder.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+  });
+
+  requestAnimationFrame(function loop() {
+    const easting = 14;
+    cursorBorderPos.x += (cursorPos.x - cursorBorderPos.x) / easting;
+    cursorBorderPos.y += (cursorPos.y - cursorBorderPos.y) / easting;
+
+    cursorBorder.style.transform = `translate(${cursorBorderPos.x}px, ${cursorBorderPos.y}px)`;
+    //console.log(cursorBorderPos.x, cursorBorderPos.y)
+    requestAnimationFrame(loop);
+  });
 
   for (let i = 0; i < 4; i++) {
     document.querySelectorAll(".link")[i].firstChild.style.fontSize = "20px";
@@ -18,7 +107,6 @@ onMounted(() => {
     document.querySelectorAll(".link")[i].firstChild.style.fontWeight = "500";
     document.querySelectorAll(".link")[i].lastChild.style.fontWeight = "700";
     document.querySelectorAll(".link")[i].firstChild.style.display = "contents";
-    
   }
 });
 
@@ -28,6 +116,22 @@ function hamburgerClick() {
 
   icon.classList.toggle("open");
   navigationLinks.classList.toggle("open");
+  gsap.fromTo(
+    ".navbar-anim",
+    {
+      x: -500,
+      opacity: 0,
+    },
+    {
+      x: 0,
+      opacity: 1,
+      stagger: {
+        amount: 0.08,
+        from: "start",
+        ease: "power4.out",
+      },
+    }
+  );
 }
 </script>
 
@@ -35,7 +139,7 @@ function hamburgerClick() {
   <nav>
     <div class="brand-container">
       <div class="brand-logo">
-        <img src="./assets/resq_transparent2.png" width="60px" alt="" />
+        
       </div>
       <div class="brand-name">denividan@gmail.com</div>
     </div>
@@ -61,24 +165,34 @@ function hamburgerClick() {
   </nav>
   <div class="links-container mobile">
     <ul>
-      <RouterLink @click="hamburgerClick()" to="/" class="link">
+      <RouterLink @click="hamburgerClick()" to="/" class="link navbar-anim">
         <div>001</div>
         <div>HOME</div>
       </RouterLink>
-      <RouterLink @click="hamburgerClick()" to="/about" class="link">
+      <RouterLink
+        @click="hamburgerClick()"
+        to="/about"
+        class="link navbar-anim"
+      >
         <div>002</div>
         <div>ABOUT</div>
       </RouterLink>
-      <RouterLink @click="hamburgerClick()" to="/mywork" class="link">
+      <RouterLink
+        @click="hamburgerClick()"
+        to="/mywork"
+        class="link navbar-anim"
+      >
         <div>003</div>
         <div>MY WORK</div>
       </RouterLink>
-      <RouterLink @click="hamburgerClick()" to="/contact" class="link">
+      <RouterLink
+        @click="hamburgerClick()"
+        to="/contact"
+        class="link navbar-anim"
+      >
         <div>004</div>
         <div>CONTACT</div>
       </RouterLink>
-
-
 
       <!-- premade sections -->
       <!-- 
@@ -89,7 +203,8 @@ function hamburgerClick() {
              -->
     </ul>
   </div>
-  <main style="overflow-x: hidden;">
+  <main style="width: 100vw">
+    <div id="cursor-border"></div>
     <RouterView />
   </main>
 </template>
@@ -98,9 +213,102 @@ function hamburgerClick() {
 /* .router-link-active {
   color: #646cff
 } */
+/* *{
+  cursor: none;
+ } */
+
+:root {
+  --cursor-content: url(https://www.orthopedicare.com/wp-content/themes/socius/images/scroll-down.gif);
+}
+#cursor-border {
+  /* mix-blend-mode: difference; */
+  --size: 50px;
+  --cursor-image: url(https://www.orthopedicare.com/wp-content/themes/socius/images/scroll-down.gif);
+  position: fixed;
+  top: calc(var(--size) / -2);
+  left: calc(var(--size) / -2);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  /* box-shadow: 0 0 0 1px white; */
+  background: transparent;
+
+  pointer-events: none;
+  transition: top 0.15s ease-out, left 0.15s ease-out, width 0.15s ease-out,
+    height 0.15s ease-out, background-color 0.15s ease-out;
+  z-index: 999;
+}
+#cursor-border::before {
+  content: "";
+  --cursor-content: var(--cursor-image);
+  animation-duration: 1s;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  color: red;
+  mix-blend-mode: difference;
+  background-image: var(--cursor-content);
+  background-size: 100%;
+  background-size: contain; /* Ensure the image covers the element */
+  background-repeat: no-repeat;
+  border-radius: 100%;
+  transition: background-image 200ms ease;
+}
+#cursor-border.no-image::before {
+  background-image: none;
+}
+@keyframes example {
+  from {
+    font-size: 5px;
+  }
+  to {
+    font-size: 15px;
+  }
+}
 .link.router-link-exact-active,
 .link.router-link-active {
   color: #646cff;
+  background-image: url("https://cc-prod.scene7.com/is/image/CCProdAuthor/wide-angle-lens_P6_720x264?$pjpeg$&jpegSize=200&wid=720");
+  background-repeat: no-repeat;
+  background-position: center; /* Center the image */
+  background-size: cover;
+  padding: 50px;
+  background-color: rgba(0, 0, 0, 0.85);
+  background-blend-mode: multiply;
+  transform: scale(1.2);
+}
+.link.router-link-exact-active:nth-child(1),
+.link.router-link-active:nth-child(1) {
+  background-image: url("https://images.pexels.com/photos/866398/pexels-photo-866398.jpeg?cs=srgb&dl=pexels-ralph-chang-260364-866398.jpg&fm=jpg");
+}
+.link.router-link-exact-active:nth-child(2),
+.link.router-link-active:nth-child(2) {
+  background-image: url("https://c4.wallpaperflare.com/wallpaper/292/446/516/ultra-wide-photography-wallpaper-preview.jpg");
+}
+.link.router-link-exact-active:nth-child(3),
+.link.router-link-active:nth-child(3) {
+  background-image: url("https://www.adobe.com/creativecloud/photography/discover/media_14a70d05518088731e4ca4904415f2cec8641d72a.png?width=750&format=png&optimize=medium");
+}
+.link.router-link-exact-active:nth-child(4),
+.link.router-link-active:nth-child(4) {
+  background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQOtojl7Nry10DrNratv8CWMdwGHE_5U04RvA&s");
+}
+.link::before {
+  position: absolute;
+  content: "";
+  width: var(--before-width, 0%);
+  height: 5px;
+  border-radius: 100%;
+  top: 50%;
+  background-color: red;
+  transform: rotate(var(--before-rotation));
+  transition: 150ms ease-in-out;
 }
 .link {
   color: #adadadff;
@@ -220,7 +428,7 @@ a {
 }
 
 .navbar-hamburger {
-  display: none;
+  display: flex;
   cursor: pointer;
   position: relative;
   width: 70px;
@@ -271,14 +479,14 @@ a {
 .links-container.mobile {
   top: 0;
   left: 0;
-  display: none;
+  display: flex;
   z-index: 0;
 }
 .links-container.desktop {
-  display: flex;
+  display: none;
 }
 
-@media (max-width: 1025px) {
+@media (max-width: 2025px) {
   .navbar-hamburger {
     display: flex;
   }
@@ -286,19 +494,19 @@ a {
     background-color: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(15px);
     width: 100%;
-    transform: translateY(-100px);
+    /* transform: translateY(-100px); */
     opacity: 0;
     top: -100vh;
     position: fixed;
     display: flex;
     justify-content: center;
-    transition: 200ms ease-out;
+    transition: 300ms ease-out;
     z-index: 1;
   }
   .links-container.mobile > ul {
     display: flex;
     flex-direction: column;
-    transition: 200ms ease-out;
+    /* transition: 200ms ease-out; */
   }
 
   .links-container.mobile.open {
@@ -309,10 +517,9 @@ a {
     ); /* Adjust the max-height to your content height */
     transform: translateY(60px);
     opacity: 1;
-    transition: 0.3s cubic-bezier(.37,-0.2,.53,1.34)
+    transition: 0.4s ease-out;
   }
   .links-container.mobile.open > ul {
-
     align-self: center;
     font-size: 80px;
     font-weight: bolder;
