@@ -3,195 +3,476 @@ import * as THREE from "three";
 import { onMounted, onUnmounted, ref, render } from "vue";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { HalfCircleSpinner } from "epic-spinners";
+import { Draggable } from "gsap/Draggable";
+import companiesData from "../assets/fakedata.json";
 
 gsap.registerPlugin(ScrollTrigger);
-
-let scene = new THREE.Scene();
-let renderer;
-
-let canvasRef = ref();
-
-var textureLoader = new THREE.TextureLoader();
-
-
-/* camera settings */
-let camera = new THREE.PerspectiveCamera(
-  55,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  100
-);
-
-camera.position.y = 1;
-camera.position.z = 2;
-camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-scene.add(camera);
-
-let loop = () => {
-  /* box.rotation.y += 0.001; */
-  renderer.render(scene, camera);
-};
-
-let resizeCallback = () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-};
-
-document.onkeydown = function (e) {
-  if (e.key === "p") {
-    video.addEventListener("playing", (event) => {
-      //console.log(event.type)
-      return event.type;
-    });
-    video.play();
-  } else if (e.key === "x") {
-    video.addEventListener("pause", (event) => {
-      console.log("video is pause", event.type);
-    });
-    video.pause();
-  }
-};
-
-const manager = new THREE.LoadingManager();
+gsap.registerPlugin(Draggable);
+let progress_count = ref("001");
+let companies = ref(companiesData);
 onMounted(() => {
-  manager.onLoad = function () {
-    console.log("Loading complete!");
-  };
+  
 
-  let video = document.getElementById("video");
-  let videoTexture = new THREE.VideoTexture(video);
-  video.addEventListener(
-    "loadeddata",
-    function () {
-      console.log("video redy");
-      document.getElementById("loading-screen").style.display = "none";
+  let progressSpan = document.querySelector(".progress-span");
+  progressSpan.style.setProperty("--progress-width", "70%");
+  let iteration = 0; // gets iterated when we scroll all the way to the end or start and wraps around - allows us to smoothly continue the playhead scrubbing in the correct direction.
+
+  // set initial state of items
+  gsap.set(".cards li", { xPercent: 250, opacity: 0, scale: 0 });
+  gsap.set(".title", { opacity: 0, xPercent: 100 });
+
+  const spacing = 0.2, // spacing of the cards (stagger)
+    snapTime = gsap.utils.snap(spacing), // we'll use this to snapTime the playhead on the seamlessLoop
+    cards = gsap.utils.toArray(".cards li"),
+    // this function will get called for each element in the buildSeamlessLoop() function, and we just need to return an animation that'll get inserted into a master timeline, spaced
+    animateFunc = (element, index) => {
+      const tl = gsap.timeline();
+      tl.fromTo(
+        element,
+        { scale: 0.1, opacity: 0 },
+        {
+          scale: 1,
+          opacity: 1,
+          zIndex: 100,
+          duration: 0.5,
+          yoyo: true,
+          repeat: 1,
+          ease: "power1.out",
+          immediateRender: false,
+          onUpdate: () => {
+            // Controlla se la card è al centro (xPercent vicino a 0)
+            const progress = tl.progress();
+            if (progress >= 0.33 && progress <= 0.55) {
+              // Se la card è centrale, mostra il titolo
+              gsap.to(element.querySelector(".title"), {
+                xPercent: 0,
+                opacity: 1,
+                duration: 0.3,
+              });
+            } else if (progress <= 0.33) {
+              gsap.to(element.querySelector(".title"), {
+                opacity: 0,
+                duration: 0.3,
+                xPercent: 100,
+              });
+            } else if (progress >= 0.35) {
+              gsap.to(element.querySelector(".title"), {
+                opacity: 0,
+                duration: 0.3,
+                xPercent: -100,
+              });
+            }
+          },
+        }
+      ).fromTo(
+        element,
+        { xPercent: 400 },
+        { xPercent: -400, duration: 1, ease: "none", immediateRender: false },
+        0
+      );
+      return tl;
     },
-    false
-  );
+    seamlessLoop = buildSeamlessLoop(cards, spacing, animateFunc),
+    playhead = { offset: 0 }, // a proxy object we use to simulate the playhead position, but it can go infinitely in either direction and we'll just use an onUpdate to convert it to the corresponding time on the seamlessLoop timeline.
+    wrapTime = gsap.utils.wrap(0, seamlessLoop.duration()), // feed in any offset (time) and it'll return the corresponding wrapped time (a safe value between 0 and the seamlessLoop's duration)
+    scrub = gsap.to(playhead, {
+      // we reuse this tween to smoothly scrub the playhead on the seamlessLoop
+      offset: 0,
+      onUpdate() {
+        seamlessLoop.time(wrapTime(playhead.offset)); // convert the offset to a "safe" corresponding time on the seamlessLoop timeline
+      },
+      duration: 0.5,
+      ease: "power3.out",
+      paused: true,
+    }),
+    trigger = ScrollTrigger.create({
+      start: 0,
+      onUpdate(self) {
+        let scroll = self.scroll();
+        /* console.log(self.direction) */
+        progress_count.value =
+          "00" + Math.floor(Math.floor(self.progress * 100) / 14 + 1);
+        progressSpan.style.setProperty(
+          "--progress-width",
+          Math.floor(self.progress * 100) + "%"
+        );
+        if (scroll > self.end - 1) {
+          wrap(1, 2);
+        } else if (scroll < 1 && self.direction < 0) {
+          wrap(-1, self.end - 2);
+        } else {
+          scrub.vars.offset =
+            (iteration + self.progress) * seamlessLoop.duration();
+          scrub.invalidate().restart(); // to improve performance, we just invalidate and restart the same tween. No need for overwrites or creating a new tween on each update.
+        }
+      },
+      end: "+=8000",
+      pin: ".gallery",
+    }),
+    // converts a progress value (0-1, but could go outside those bounds when wrapping) into a "safe" scroll value that's at least 1 away from the start or end because we reserve those for sensing when the user scrolls ALL the way up or down, to wrap.
+    progressToScroll = (progress) =>
+      gsap.utils.clamp(
+        1,
+        trigger.end - 1,
+        gsap.utils.wrap(0, 1, progress) * trigger.end
+      ),
+    wrap = (iterationDelta, scrollTo) => {
+      iteration += iterationDelta;
+      trigger.scroll(scrollTo);
+      trigger.update(); // by default, when we trigger.scroll(), it waits 1 tick to update().
+    };
 
-  var texture0 = textureLoader.load("src/assets/images/MaskaDeni.png");
-  var texture1 = textureLoader.load("src/assets/images/lagan.mp4");
-  var texture2 = textureLoader.load("src/assets/images/MaskaDeni.png");
-  var texture3 = textureLoader.load("src/assets/images/MaskaDeni.png");
-  var texture4 = textureLoader.load("src/assets/images/MaskaDeni.png");
-  var texture5 = textureLoader.load("src/assets/images/MaskaDeni.png");
+  // when the user stops scrolling, snap to the closest item.
+  ScrollTrigger.addEventListener("scrollEnd", () => {
+    scrollToOffset(scrub.vars.offset);
+  });
 
-  var materials = [
-    new THREE.MeshBasicMaterial({ map: texture0 }),
-    new THREE.MeshBasicMaterial({ map: videoTexture }),
-    new THREE.MeshBasicMaterial({ map: texture2 }),
-    new THREE.MeshBasicMaterial({ map: texture3 }),
-    new THREE.MeshBasicMaterial({ map: texture4 }),
-    new THREE.MeshBasicMaterial({ map: texture5 }),
-  ];
+  // feed in an offset (like a time on the seamlessLoop timeline, but it can exceed 0 and duration() in either direction; it'll wrap) and it'll set the scroll position accordingly. That'll call the onUpdate() on the trigger if there's a change.
+  function scrollToOffset(offset) {
+    // moves the scroll playhead to the place that corresponds to the totalTime value of the seamlessLoop, and wraps if necessary.
+    let snappedTime = snapTime(offset),
+      progress =
+        (snappedTime - seamlessLoop.duration() * iteration) /
+        seamlessLoop.duration(),
+      scroll = progressToScroll(progress);
+    if (progress >= 1 || progress < 0) {
+      return wrap(Math.floor(progress), scroll);
+    }
+    trigger.scroll(scroll);
+  }
 
-  let boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-  let boxMaterial = new THREE.MeshStandardMaterial({ color: "#f5f39f" });
+  /* document.querySelector(".next").addEventListener("click", () => scrollToOffset(scrub.vars.offset + spacing));
+document.querySelector(".prev").addEventListener("click", () => scrollToOffset(scrub.vars.offset - spacing));
+ */
 
-  let box = new THREE.Mesh(boxGeometry, materials);
-  box.position.set(0, 0, -2);
-  scene.add(box);
+  function buildSeamlessLoop(items, spacing, animateFunc) {
+    let rawSequence = gsap.timeline({ paused: true }), // this is where all the "real" animations live
+      seamlessLoop = gsap.timeline({
+        // this merely scrubs the playhead of the rawSequence so that it appears to seamlessly loop
+        paused: true,
+        repeat: -1, // to accommodate infinite scrolling/looping
+        onRepeat() {
+          // works around a super rare edge case bug that's fixed GSAP 3.6.1
+          this._time === this._dur && (this._tTime += this._dur - 0.01);
+        },
+        onReverseComplete() {
+          this.totalTime(this.rawTime() + this.duration() * 100); // seamless looping backwards
+        },
+      }),
+      cycleDuration = spacing * items.length,
+      dur,
+      dur2; // the duration of just one animateFunc() (we'll populate it in the .forEach() below...
 
-  //LIGHTS
+    // loop through 3 times so we can have an extra cycle at the start and end - we'll scrub the playhead only on the 2nd cycle
+    items
+      .concat(items)
+      .concat(items)
+      .forEach((item, i) => {
+        let anim = animateFunc(items[i % items.length]);
+        /* console.log(item.querySelector(".title")) */
 
-  let ambientLight = new THREE.AmbientLight("white", 1);
-  scene.add(ambientLight);
+        rawSequence.add(anim, i * spacing);
 
-  const directionalLight1 = new THREE.DirectionalLight("red", 0.8);
-  directionalLight1.position.set(-10, 10, 0);
-  scene.add(directionalLight1);
+        dur || (dur = anim.duration());
+      });
 
-  const directionalLight2 = new THREE.DirectionalLight("blue", 0.8);
-  directionalLight2.position.set(20, 30, 0);
-  scene.add(directionalLight2);
+    // animate the playhead linearly from the start of the 2nd cycle to its end (so we'll have one "extra" cycle at the beginning and end)
+    seamlessLoop.fromTo(
+      rawSequence,
+      {
+        time: cycleDuration + dur / 2,
+      },
+      {
+        time: "+=" + cycleDuration,
+        duration: cycleDuration,
 
-  const tl = gsap.timeline({
-    scrollTrigger: {
-      markers: true,
-      scrub: 1,
-      pin: true,
-      trigger: ".canvas",
-      start: "50% 50%",
-      endTrigger: ".canvas-wrap",
-      end: "70% 50%",
+        ease: "none",
+      }
+    );
+
+    return seamlessLoop;
+  }
+
+  // below is the dragging functionality (mobile-friendly too)...
+  Draggable.create(".drag-proxy", {
+    type: "x",
+    trigger: ".cards",
+    onPress() {
+      this.startOffset = scrub.vars.offset;
+    },
+    onDrag() {
+      scrub.vars.offset = this.startOffset + (this.startX - this.x) * 0.001;
+      scrub.invalidate().restart(); // same thing as we do in the ScrollTrigger's onUpdate
+    },
+    onDragEnd() {
+      scrollToOffset(scrub.vars.offset);
     },
   });
+  const cursorBorder = document.querySelector("#cursor-border");
+  cards.forEach((card) => {
+    card.addEventListener("mouseover", (e) => {
+      //console.log(e.target);
+      let text_mirror = e.target.textContent;
+      /* console.log(text_mirror) */
+      cursorBorder.style.setProperty("--size", "100px");
+      /* cursorBorder.style.mixBlendMode = "difference"; */
+      cursorBorder.style.background = `white`;
+      cursorBorder.style.opacity = `0.7`;
+      cursorBorder.style.setProperty("--cursor-image", "none");
+      //cursorBorder.style.setProperty("--tekst", "burek")
+    });
 
-  tl.to(box.rotation, {
-    y: /* box.position.y + */ 10,
-    duration: 1,
+    card.addEventListener("mouseout", (e) => {
+      cursorBorder.style.setProperty("--size", "50px");
+      cursorBorder.style.background = `transparent`;
+      cursorBorder.style.setProperty(
+        "--cursor-image",
+        `url(https://www.orthopedicare.com/wp-content/themes/socius/images/scroll-down.gif)`
+      );
+      //cursorBorder.style.setProperty("--tekst", "dada")
+    });
   });
-
-  renderer = new THREE.WebGLRenderer({
-    canvas: canvasRef.value,
-    antialias: true,
-    alpha: true,
-  });
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.render(scene, camera);
-
-  renderer.setAnimationLoop(loop);
-
-  window.addEventListener("resize", resizeCallback);
-
-  //console.log("renderer: ", renderer.domElement);
 });
 
-onUnmounted(() => {
-  renderer.setAnimationLoop(null);
-  window.removeEventListener("resize", resizeCallback);
-});
+onUnmounted(() => {});
 </script>
 
 <template>
-  <div class="canvas-wrap" style="height: 500vh">
-    <div id="loading-screen">
-      <half-circle-spinner
-        class="animation-div"
-        :animation-duration="1000"
-        :size="80"
-        color="white"
-      />
+  <div class="gallery">
+    <div
+      style="
+        position: absolute;
+        bottom: 15%;
+        left: 5%;
+        font-family: buttonFont;
+        font-size: 20px;
+      "
+    >
+      all projects
     </div>
-    <canvas class="canvas" ref="canvasRef"></canvas>
-    <div id="video-wrap" style="position: absolute; top: 0; left: 25%">
-      <video
-        id="video"
-        class="video"
-        ref="video"
-        style="position: absolute; display: none"
-        width="420"
-        height="360"
-        loop
-        muted
-        autoplay
-      >
-        <source src="../assets/images/lagan.mp4" type="video/mp4" />
-      </video>
+    <div class="progress-section">
+      <div class="progress-span"></div>
+      <span>{{ progress_count }} / 007</span>
     </div>
+    <!-- <ul class="cards">
+      <li>
+        <div class="number">001</div>
+        <div class="title">PRVI RAD</div>
+        <div class="content">
+          <img src="https://picsum.photos/seed/picsum/500/300" alt="" />
+        </div>
+      </li>
+      <li>
+        <div class="number">002</div>
+        <div class="title">DRUGI RAD</div>
+        <div class="content">
+          <img src="https://picsum.photos/seed/picsum/500/300" alt="" />
+        </div>
+      </li>
+      <li>
+        <div class="number">003</div>
+        <div class="title">TREĆI RAD</div>
+        <div class="content">
+          <img src="https://picsum.photos/seed/picsum/500/300" alt="" />
+        </div>
+      </li>
+      <li>
+        <div class="number">004</div>
+        <div class="title">ČETVRTI RAD</div>
+        <div class="content">
+          <img src="https://picsum.photos/seed/picsum/500/300" alt="" />
+        </div>
+      </li>
+      <li>
+        <div class="number">005</div>
+        <div class="title">PETI RAD</div>
+        <div class="content">
+          <img src="https://picsum.photos/seed/picsum/500/300" alt="" />
+        </div>
+      </li>
+      <li>
+        <div class="number">006</div>
+        <div class="title">ŠESTI RAD</div>
+        <div class="content">
+          <img src="https://picsum.photos/seed/picsum/500/300" alt="" />
+        </div>
+      </li>
+      <li>
+        <div class="number">007</div>
+        <div class="title">SEDMI RAD</div>
+        <div class="content">
+          <img src="https://picsum.photos/seed/picsum/500/300" alt="" />
+        </div>
+      </li>
+    </ul> -->
+    <ul class="cards">
+      <li v-for="(company, index) in companies" :key="company.id">
+        <div class="number">00{{ index+1 }}</div>
+        <div class="title">{{ company.company_name }}</div>
+        <div class="content">
+          <img :src="company.image_url" alt="" />
+        </div>
+      </li>
+    </ul>
   </div>
+  <div class="drag-proxy"></div>
 </template>
 
 <style scoped>
-#loading-screen {
-  height: 100vh;
-  width: 100%;
+* {
+  box-sizing: border-box;
+}
+.progress-section {
+  font-family: buttonFont;
   display: flex;
-  justify-content: center;
+  gap: 10px;
+  position: absolute;
+  bottom: 15%;
+  right: 5%;
+  align-items: center;
 }
-.animation-div {
-  align-self: center;
+.progress-span {
+  --progress-width: 17px;
+  display: flex;
+  align-items: center;
+  width: 70px;
+  height: 2px;
+  background-color: rgba(255, 255, 255, 0.158);
 }
-.canvas{
-  width: 300px !important;
+.progress-span::after {
+  content: "";
+  top: 50%;
+  width: calc(var(--progress-width) + 14%);
+  height: 2px;
+  background-color: white;
+  transition: all 0.5s ease-out;
+}
+.title {
+  font-family: moniquaCardTitle;
+  position: absolute;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-size: 10rem;
+  left: -25%;
+  font-weight: bold;
+  -webkit-text-stroke-width: 2px;
+  -webkit-text-stroke-color: white;
+  color: transparent;
+  z-index: 1;
+  transition: all 300ms ease-out;
+  -webkit-transition: all 300ms ease-out;
+  line-height: 115px;
+  text-align: start;
+}
+.number {
+  font-family: moniquaCardTitle;
+  position: absolute;
+  top: -20%;
+  left: 5%;
+  font-size: 1.5rem;
+  opacity: 0.7;
+}
+.content > img {
+  filter: brightness(80%);
+  z-index: 0;
+  transition: all 0.25s ease-out;
+}
+.content {
+  overflow: hidden;
+  height: 100%;
+}
+li:hover img {
+  transform: scale(1.15);
+  overflow: hidden;
+}
 
-}
-.canvas-wrap {
+body {
+  background: #111;
+  min-height: 100vh;
+  padding: 0;
   margin: 0;
+  /*   overflow-x: hidden; */
+}
+.gallery {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.cards {
+  position: absolute;
+  width: 500px;
+  height: 300px;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.cards li {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 500px;
+  height: 300px;
+  text-align: center;
+  font-size: 2rem;
+  font-family: sans-serif;
+  background-color: #9d7cce;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 0.8rem;
+}
+.cards li:hover .title {
+  color: white;
+  -webkit-text-stroke-width: 0px;
+  -webkit-text-stroke-color: none;
+  transform: scale(0.9) !important;
+  opacity: 0.8 !important;
+
+  transition: all 300ms ease-out;
+  -webkit-transition: all 300ms ease-out;
+}
+
+a {
+  color: #88ce02;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+.drag-proxy {
+  visibility: hidden;
+  position: absolute;
+}
+@font-face {
+  font-family: moniqua;
+  src: url(../assets/fonts/Variable-TT/font1.ttf) format("truetype");
+}
+@font-face {
+  font-family: moniqua2;
+  src: url(../assets/fonts/OpenType/Moniqa-ExtraBoldDisplay.ttf)
+    format("truetype");
+}
+@font-face {
+  font-family: moniquaItalic;
+  src: url(../assets/fonts/OpenType/Moniqa-NarrowItalicDisplay.ttf)
+    format("truetype");
+}
+@font-face {
+  font-family: buttonFont;
+  src: url(../assets/fonts/OpenType/Moniqa-BlackHeading.ttf) format("truetype");
+}
+@font-face {
+  font-family: regularMoniqua;
+  src: url(../assets/fonts/OpenType/Moniqa-MediumItalicParagraph.ttf)
+    format("truetype");
+}
+@font-face {
+  font-family: moniquaCardTitle;
+  src: url(../assets/fonts/OpenType/Moniqa-BlackCondParagraph.ttf)
+    format("truetype");
 }
 </style>
