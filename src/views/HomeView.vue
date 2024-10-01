@@ -96,9 +96,39 @@ onMounted(() => {
       ease: "power4.out",
     });
   }); */
+  let divider = gsap.timeline({
+    scrollTrigger: {
+      trigger: ".divider",
+      start: "center center",
+      end: "bottom top",
+      markers: true,
+      yoyo: true,
+      
+    }
+  })
+  divider.to(".divider img", {
+    rotateZ: 180,
+  })
 
-  let heroSections = gsap.utils.toArray(".hero div");
 
+  let heroSections = gsap.utils.toArray(".hero .hero-title");
+  heroSections.forEach((element, index) => {
+    gsap.from(element, {
+      x: () => {
+          if(index == 0) {
+            return -1200
+          }
+          else return 1200
+        },
+        opacity: 0,
+        duration: 0.8,
+        delay: 1,
+        ease: "back.out(1)"
+    })
+  });
+
+
+  console.log(heroSections)
   let heroScroller = gsap.timeline({
     scrollTrigger: {
       trigger: ".wrapper",
@@ -113,8 +143,15 @@ onMounted(() => {
     heroScroller.to(
       element,
       {
-        y: -100 * (index + 1),
+        /* y: -100 * (index + 1), */
+        x: () => {
+          if(index == 0) {
+            return -1200
+          }
+          else return 1200
+        },
         opacity: 0,
+        ease: "none"
       },
       "<"
     );
@@ -157,7 +194,7 @@ onMounted(() => {
       zIndex: 1,
       scrollTrigger: {
         trigger: span,
-        markers: true,
+       /*  markers: true, */
         scrub: 1,
         start: "top center+=150px",
         end: "bottom+=50px center+=150px",
@@ -173,19 +210,28 @@ onUnmounted(() => {});
     <!-- <div class="loading-div"></div> -->
     <div class="hero">
       <div class="hero-title" style="transform: translate(-200px, 0px)">
-        DENI
+        <div style="display: flex">
+          <span>DENI</span>
+          <img
+            class="image-1"
+            src="../assets/images/deni_landscape.jpg"
+            alt=""
+          />
+        </div>
       </div>
       <div class="hero-title" style="transform: translate(200px, 0px)">
-        VIDAN
-      </div>
-      <div class="image">
-        <img class="image-1" src="../assets/images/deni_landscape.jpg" alt="" />
+        <span>VIDAN</span>
         <img class="image-2" src="../assets/images/deni_nog.jpg" alt="" />
       </div>
+      <!--       <div class="image"></div> -->
       <!--       <div class="pattern">
         <img src="../assets/images/pattern.jpg" alt="" />
       </div> -->
       <!--<div class="hero-title">Studio</div>-->
+    </div>
+
+    <div class="divider">
+      <hr><img src="../assets/images/wind-rose.png" alt="">
     </div>
 
     <div class="content">
@@ -272,6 +318,7 @@ onUnmounted(() => {});
   letter-spacing: -30px;
 }
 .content {
+  margin-top: 50px;
   z-index: 0;
   background-color: black;
 }
@@ -301,44 +348,40 @@ onUnmounted(() => {});
   height: 120%;
   border-radius: 100%;
 }
-.image > img {
+
+.hero-title img {
+  position: absolute;
+  top: 0;
+  border-radius: 10px;
+  width: 15rem;
+  height: 15rem;
+  z-index: -1;
   opacity: 1;
   mask-image: linear-gradient(
     to bottom,
     rgb(0, 0, 0, 1) 10%,
     rgba(0, 0, 0, 0) 120%
   );
-  width: 16rem;
-  height: 16rem;
-  z-index: -1;
 }
 .image-1 {
-  position: absolute;
-  top: 0;
-  border-radius: 10px;
-  transform: translate(200px, 0px);
+  transform: translate(670px, 0px);
+    mask-image: linear-gradient(
+    to bottom,
+    rgb(0, 0, 0, 1) 10%,
+    rgba(0, 0, 0, 0) 110%
+  ) !important;
   transition: 2s all;
 }
-.image-1:hover {
-  transform: translate(200px, 0px);
-  transform: skew(15deg);
-}
-.image-2:hover {
-  transform: translate(-450px, 250px);
-  transform: rotate(15deg);
-}
+
 .image-2 {
-  position: absolute;
-  top: 0;
-  border-radius: 10px;
-  transform: translate(-450px, 250px);
+  transform: translate(-500px, 0px);
   mask-image: linear-gradient(
     to bottom,
     rgb(0, 0, 0, 0.1) 10%,
     rgba(0, 0, 0, 1) 110%
   ) !important;
-    transition: 2s all;
-    transform-origin: 0,0;
+  transition: 2s all;
+  transform-origin: center !important;
 }
 
 .loading-div {
@@ -379,7 +422,9 @@ onUnmounted(() => {});
   display: flex;
   justify-content: center;
   z-index: 0;
-  mix-blend-mode:hard-light;
+  padding: 10px;
+}
+.hero-title span {
   opacity: 0.7;
 }
 .counter {
