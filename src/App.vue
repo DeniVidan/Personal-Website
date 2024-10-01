@@ -223,13 +223,13 @@ function hamburgerClick() {
 #cursor-border {
   /* mix-blend-mode: difference; */
   --size: 50px;
-  --cursor-image: url(https://www.orthopedicare.com/wp-content/themes/socius/images/scroll-down.gif);
+  --cursor-image: url(https://www.jameshotels.com/content/themes/base/img/icons/scroll.gif);
   position: fixed;
   top: calc(var(--size) / -2);
   left: calc(var(--size) / -2);
   width: var(--size);
   height: var(--size);
-  border-radius: 50%;
+  border-radius: 10%;
   /* box-shadow: 0 0 0 1px white; */
   background: transparent;
 
@@ -257,7 +257,7 @@ function hamburgerClick() {
   background-size: 100%;
   background-size: contain; /* Ensure the image covers the element */
   background-repeat: no-repeat;
-  border-radius: 100%;
+  /* border-radius: 100%; */
   transition: background-image 200ms ease;
 }
 #cursor-border.no-image::before {
