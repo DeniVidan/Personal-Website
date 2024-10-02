@@ -99,16 +99,25 @@ onMounted(() => {
   let divider = gsap.timeline({
     scrollTrigger: {
       trigger: ".divider",
-      start: "center center",
+      start: "center bottom",
       end: "bottom top",
+      scrub: 1,
       markers: true,
       yoyo: true,
       
     }
   })
-  divider.to(".divider img", {
-    rotateZ: 180,
-  })
+  let dividers = gsap.utils.toArray(".divider-image img")
+  dividers.forEach((element, index) => {
+    divider.to(element, {
+    rotateZ: () => {
+      if(index%2==0) {
+        return 180
+      } else return -180
+    },
+  }, "<")
+  });
+  
 
 
   let heroSections = gsap.utils.toArray(".hero .hero-title");
@@ -159,7 +168,7 @@ onMounted(() => {
 
   gsap.from(".content", {
     y: 200,
-    duration: 3,
+    duration: 1,
     ease: "power3.out",
     stagger: 1,
     opacity: 0,
@@ -167,7 +176,7 @@ onMounted(() => {
       trigger: ".content h1",
       start: "top bottom",
       end: "top bottom-=250px",
-      scrub: 1,
+      toggleActions: "play pause resume reset"
 
       /* markers: true */
     },
@@ -231,7 +240,15 @@ onUnmounted(() => {});
     </div>
 
     <div class="divider">
-      <hr><img src="../assets/images/wind-rose.png" alt="">
+<!--       <div class="divider-line">
+        
+      </div> -->
+      <div class="divider-image">
+        <img src="../assets/images/wind-rose.png" alt="">
+      </div>
+            <div class="divider-image">
+        <img src="../assets/images/wind-rose.png" alt="">
+      </div>
     </div>
 
     <div class="content">
@@ -296,6 +313,26 @@ onUnmounted(() => {});
   /*   outline: 6px dotted teal; */
   line-height: 2;
   font-size: 70px;
+}
+.divider {
+  display: flex;
+}
+.divider-line{
+  position:absolute;
+  height: 1px;
+  top:105%;
+  width: 100%;
+  background-color: white;
+
+}
+.divider-image {
+  width: 100px;
+  height: 100px;
+  margin: auto;
+  background-color: black;
+}
+.divider-image img {
+  opacity: 0.5;
 }
 .footer {
   height: 450px;
